@@ -1,0 +1,55 @@
+const {
+  Client,
+  PrivateKey,
+  Hbar,
+  Transaction,
+  TransferTransaction,
+  ScheduleCreateTransaction
+} = require("@hashgraph/sdk");
+require('dotenv').config();
+
+const accountId1 = process.env.ACCOUNT_ID_1;
+const privateKey1 = PrivateKey.fromString(process.env.PRIVATE_KEY_1);
+
+const accountId2 = process.env.ACCOUNT_ID_2;
+const privateKey2 = PrivateKey.fromString(process.env.PRIVATE_KEY_2);
+
+const client = Client.forName(process.env.HEDERA_NETWORK);
+client.setOperator(accountId1, privateKey1);
+
+async function main() {
+  // Create transaction
+  const trx = new TransferTransaction()
+    .addHbarTransfer(accountId1, new Hbar(-10))
+    .addHbarTransfer(accountId2, new Hbar(10));
+
+  // Create schedule for the above transaction
+  const scheduleTransaction = new ScheduleCreateTransaction()
+    .setScheduledTransaction(trx)
+    .setScheduleMemo("Here is a memo")
+    .setAdminKey(privateKey1)
+    .freezeWith(client);
+
+  // Serialize the scheduled transaction
+  const serialized = Buffer.from(scheduleTransaction.toBytes()).toString('hex');
+
+  console.log(`Serialized: ${serialized}`);
+
+  // Deserialize the scheduled transaction
+  const deserializedTrx = Transaction.fromBytes(Buffer.from(serialized, 'hex'));
+
+  deserializedTrx.sign(privateKey1);
+
+  const executed = await deserializedTrx.execute(client);
+
+  let receipt = await executed.getReceipt(client);
+
+  console.log('Successfully created and executed scheduled transaction with status', receipt.status);
+}
+
+main();
+
+/**
+ * Serialized: 0aa7012aa4010a9f010a1b0a0c08d39daa9e0610d3fec0a00312090800100018df9fc417180012060800100018031880cab5ee01220208783200d2026b0a350880c2d72f12004a2c0a2a0a130a090800100018df9fc41710ffa7d6b90718000a130a090800100018e09fc4171080a8d6b9071800120e486572652069732061206d656d6f1a2212209da1764beaf058e94119fb10f4b5e5adc47f0045a0c3b1f0d593b0626d056bcb12000aa7012aa4010a9f010a1b0a0c08d39daa9e0610d3fec0a00312090800100018df9fc417180012060800100018071880cab5ee01220208783200d2026b0a350880c2d72f12004a2c0a2a0a130a090800100018df9fc41710ffa7d6b90718000a130a090800100018e09fc4171080a8d6b9071800120e486572652069732061206d656d6f1a2212209da1764beaf058e94119fb10f4b5e5adc47f0045a0c3b1f0d593b0626d056bcb12000aa7012aa4010a9f010a1b0a0c08d39daa9e0610d3fec0a00312090800100018df9fc417180012060800100018041880cab5ee01220208783200d2026b0a350880c2d72f12004a2c0a2a0a130a090800100018df9fc41710ffa7d6b90718000a130a090800100018e09fc4171080a8d6b9071800120e486572652069732061206d656d6f1a2212209da1764beaf058e94119fb10f4b5e5adc47f0045a0c3b1f0d593b0626d056bcb12000aa7012aa4010a9f010a1b0a0c08d39daa9e0610d3fec0a00312090800100018df9fc417180012060800100018061880cab5ee01220208783200d2026b0a350880c2d72f12004a2c0a2a0a130a090800100018df9fc41710ffa7d6b90718000a130a090800100018e09fc4171080a8d6b9071800120e486572652069732061206d656d6f1a2212209da1764beaf058e94119fb10f4b5e5adc47f0045a0c3b1f0d593b0626d056bcb12000aa7012aa4010a9f010a1b0a0c08d39daa9e0610d3fec0a00312090800100018df9fc417180012060800100018091880cab5ee01220208783200d2026b0a350880c2d72f12004a2c0a2a0a130a090800100018df9fc41710ffa7d6b90718000a130a090800100018e09fc4171080a8d6b9071800120e486572652069732061206d656d6f1a2212209da1764beaf058e94119fb10f4b5e5adc47f0045a0c3b1f0d593b0626d056bcb12000aa7012aa4010a9f010a1b0a0c08d39daa9e0610d3fec0a00312090800100018df9fc417180012060800100018051880cab5ee01220208783200d2026b0a350880c2d72f12004a2c0a2a0a130a090800100018df9fc41710ffa7d6b90718000a130a090800100018e09fc4171080a8d6b9071800120e486572652069732061206d656d6f1a2212209da1764beaf058e94119fb10f4b5e5adc47f0045a0c3b1f0d593b0626d056bcb12000aa7012aa4010a9f010a1b0a0c08d39daa9e0610d3fec0a00312090800100018df9fc417180012060800100018081880cab5ee01220208783200d2026b0a350880c2d72f12004a2c0a2a0a130a090800100018df9fc41710ffa7d6b90718000a130a090800100018e09fc4171080a8d6b9071800120e486572652069732061206d656d6f1a2212209da1764beaf058e94119fb10f4b5e5adc47f0045a0c3b1f0d593b0626d056bcb1200
+ * Successfully created and executed scheduled transaction with status Status { _code: 22 }
+ */
